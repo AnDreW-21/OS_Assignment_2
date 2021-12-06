@@ -60,11 +60,11 @@ class Semaphore {
     public synchronized void use(String devName) throws InterruptedException, IOException {
         if (bound > 0) {
             bound--;
-            out=devName + " Occupied";
+            out=Thread.currentThread().getName() +" Name: "+ devName+" Occupied";
             System.out.println(out);
             new logs(out);
         } else {
-            out=Thread.currentThread().getName() + " arrived and waiting";
+            out=Thread.currentThread().getName() +" Name: "+ devName+" arrived and waiting";
             System.out.println(out);
             new logs(out);
             wait();
@@ -136,8 +136,8 @@ class Device extends Thread {
     @Override
     public void run() {
         try {
-            System.out.println(deviceName+" arrived");
-            new logs(deviceName+" arrived");
+            System.out.println("Name: "+deviceName+ " type: "+type +" arrived");
+            new logs("Name: "+deviceName+ " type: "+type +" arrived");
             router.LogIn(this);
             router.performActivity(this);
             router.LogOut(this);
@@ -163,7 +163,7 @@ public class Network {
         int TC = inp.nextInt();
         inp.nextLine();
         Semaphore sem = new Semaphore(N);
-        ArrayList<Device> devQue = new ArrayList<>();
+        ArrayList<Device> TC_lines = new ArrayList<>();
         for (int i = 0; i < TC; i++) {
             String dev;
             dev = inp.nextLine();
@@ -174,24 +174,23 @@ public class Network {
             }
             Device device = new Device(devData[0], devData[1], sem);
 
-            devQue.add(device);
+            TC_lines.add(device);
         }
-        for (Device device : devQue) {
+        for (Device device : TC_lines) {
             device.start();
+
         }
     }
 }
 
 class logs {
     File file = new File("logs.txt");
-
     logs(String log) throws IOException {
         FileWriter logFile = new FileWriter(file, true);
         logFile.write(log + "\n");
         logFile.flush();
         logFile.close();
     }
-
     logs() throws IOException {
         FileWriter logFile = new FileWriter(file);
     }
