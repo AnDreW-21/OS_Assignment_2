@@ -1,15 +1,14 @@
 import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Scanner;
 
 class Router {
-    ArrayList<Device> devicesLoggedIn;
-    Semaphore semaphore;
+    private final ArrayList<Device> devicesLoggedIn;
+    private final Semaphore semaphore;
+
 
     Router() {
         devicesLoggedIn = null;
-        semaphore = null;
+        semaphore = new Semaphore(0);
     }
 
     Router(Semaphore sem) {
@@ -18,19 +17,15 @@ class Router {
     }
 
     public boolean LogIn(Device dev) throws InterruptedException {
-        System.out.println(dev + "arrived");
-        semaphore.use();
-        System.out.println(Thread.currentThread().getName() + dev + "Occupied");
+        semaphore.use(dev.getDeviceName());
         devicesLoggedIn.add(dev);
         System.out.println(Thread.currentThread().getName() + dev + "Logged In");
         return true;
     }
 
-    public boolean LogOut(Device dev) throws InterruptedException {
+    public void LogOut(Device dev) throws InterruptedException {
         devicesLoggedIn.removeIf(d -> d == dev);
-        semaphore.release();
-        System.out.println(Thread.currentThread().getName() + dev + "Logged Out");
-        return false;
+        semaphore.release(dev.getDeviceName());
     }
 
     public void performActivity(Device dev) {
@@ -44,57 +39,80 @@ class Router {
 }
 
 class Semaphore {
-    private int signals;
     private int bound;
 
-    Semaphore() {
-        signals = 0;
-        bound = 0;
-    }
 
     public Semaphore(int bound) {
         this.bound = bound;
     }
 
-    public synchronized void use() throws InterruptedException {
-        if (this.signals == bound) wait();
-        this.signals++;
-
+    public synchronized void use(String devName) throws InterruptedException {
+        if (bound > 0) {
+            bound--;
+            System.out.println(devName + " Occupied");
+        } else {
+            System.out.println(Thread.currentThread().getName() + " arrived and waiting");
+            wait();
+        }
     }
 
-    public synchronized void release() throws InterruptedException {
-        if (this.signals == 0) wait();
-        this.signals--;
-        this.notify();
+    public synchronized void release(String devName) throws InterruptedException {
+        this.bound++;
+        if (bound > 0)
+            this.notify();
+        System.out.println(Thread.currentThread().getName() +" Name: "+devName + " Logged Out");
     }
 
-    public synchronized int getBound() {
+    public  int getBound() {
         return bound;
     }
-
-    public synchronized int value() {
-        return signals;
+    public void  setBound(int bound) {
+        this.bound=bound;
     }
+
+
 }
 
 class Device extends Thread {
-    String deviceName, type;
-    Router router;
-    Semaphore semaphore;
+    private String deviceName, type;
+    private final Router router;
+    private final Semaphore semaphore;
+    private Thread thread;
 
     Device() {
         deviceName = "";
         type = "";
-        semaphore = new Semaphore();
+        semaphore = new Semaphore(0);
         router = new Router(semaphore);
-
     }
 
     Device(String deviceName, String type, Semaphore sem) {
+
         this.deviceName = deviceName;
         this.type = type;
         this.router = new Router(sem);
         semaphore = sem;
+        thread = new Thread(this);
+    }
+
+    public void setDeviceName(String name) {
+        this.deviceName = deviceName;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public String getDeviceName() {
+        return deviceName;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public Thread getThread() {
+        return thread;
     }
 
     @Override
@@ -109,27 +127,23 @@ class Device extends Thread {
     }
 
     @Override
-    public String toString(){
-        return  " Name: "+deviceName +" type: " + type + " ";
+    public String toString() {
+        return " Name: " + deviceName + " type: " + type + " ";
     }
 }
 
 public class Network {
 
-
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         Scanner inp = new Scanner(System.in);
         System.out.println("What is the number of Wi-Fi connections");
-        int connNo = inp.nextInt();
+        int N = inp.nextInt();
         System.out.println("What is the number of Devices connecting");
-        int devNo = inp.nextInt();
+        int TC = inp.nextInt();
         inp.nextLine();
-        Semaphore sem = new Semaphore(connNo);
-
-
+        Semaphore sem = new Semaphore(N);
         ArrayList<Device> devQue = new ArrayList<>();
-
-        for (int i = 0; i < devNo; i++) {
+        for (int i = 0; i < TC; i++) {
             String dev;
             dev = inp.nextLine();
             String[] devData = dev.split(" ", 2);
@@ -138,14 +152,13 @@ public class Network {
                 System.exit(0);
             }
             Device device = new Device(devData[0], devData[1], sem);
+
             devQue.add(device);
         }
-        for (int i = 0; i < devQue.size(); i++) {
-            devQue.get(i).start();
-
+        for (Device device : devQue) {
+            device.start();
         }
     }
-
 }
 
 
