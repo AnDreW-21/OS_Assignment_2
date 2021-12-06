@@ -1,3 +1,8 @@
+import javax.swing.*;
+import javax.swing.border.Border;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -41,7 +46,7 @@ class Router {
                 System.out.println(out);
                 new logs(out);
             } else {
-                out =Thread.currentThread().getName() + dev + "not logged in yet";
+                out = Thread.currentThread().getName() + dev + "not logged in yet";
                 System.out.println(out);
                 new logs(out);
             }
@@ -60,22 +65,22 @@ class Semaphore {
     public synchronized void use(String devName) throws InterruptedException, IOException {
         if (bound > 0) {
             bound--;
-            out=Thread.currentThread().getName() +" Name: "+ devName+" Occupied";
+            out = Thread.currentThread().getName() + " Name: " + devName + " Occupied";
             System.out.println(out);
             new logs(out);
         } else {
-            out=Thread.currentThread().getName() +" Name: "+ devName+" arrived and waiting";
+            out = Thread.currentThread().getName() + " Name: " + devName + " arrived and waiting";
             System.out.println(out);
             new logs(out);
             wait();
         }
     }
 
-    public synchronized void release(String devName) throws  IOException {
+    public synchronized void release(String devName) throws IOException {
         this.bound++;
         if (bound > 0)
             this.notify();
-        out=Thread.currentThread().getName() + " Name: " + devName + " Logged Out";
+        out = Thread.currentThread().getName() + " Name: " + devName + " Logged Out";
         System.out.println(out);
         new logs(out);
     }
@@ -136,8 +141,8 @@ class Device extends Thread {
     @Override
     public void run() {
         try {
-            System.out.println("Name: "+deviceName+ " type: "+type +" arrived");
-            new logs("Name: "+deviceName+ " type: "+type +" arrived");
+            System.out.println("Name: " + deviceName + " type: " + type + " arrived");
+            new logs("Name: " + deviceName + " type: " + type + " arrived");
             router.LogIn(this);
             router.performActivity(this);
             router.LogOut(this);
@@ -153,17 +158,19 @@ class Device extends Thread {
 }
 
 public class Network {
+    public static int N, TC;
+    public static ArrayList<Device> TC_lines = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
-        logs log = new logs();
+        new logs();
+        new GUI();
         Scanner inp = new Scanner(System.in);
         System.out.println("What is the number of Wi-Fi connections");
-        int N = inp.nextInt();
+        N = inp.nextInt();
         System.out.println("What is the number of Devices connecting");
-        int TC = inp.nextInt();
+        TC = inp.nextInt();
         inp.nextLine();
         Semaphore sem = new Semaphore(N);
-        ArrayList<Device> TC_lines = new ArrayList<>();
         for (int i = 0; i < TC; i++) {
             String dev;
             dev = inp.nextLine();
@@ -181,18 +188,98 @@ public class Network {
 
         }
     }
+
 }
+
 
 class logs {
     File file = new File("logs.txt");
+
     logs(String log) throws IOException {
         FileWriter logFile = new FileWriter(file, true);
         logFile.write(log + "\n");
         logFile.flush();
         logFile.close();
     }
+
     logs() throws IOException {
         FileWriter logFile = new FileWriter(file);
+    }
+
+}
+
+class GUI extends JFrame {
+    GUI() {
+        JLabel lab1 = new JLabel("What is the number of Wi-Fi connections?");
+        lab1.setBounds(10, 15, 600, 20);
+        lab1.setFont(new Font("Verdana", Font.PLAIN, 18));
+        add(lab1);
+
+        JLabel lab2 = new JLabel("What is the number of Devices connecting?");
+        lab2.setBounds(500, 15, 600, 20);
+        lab2.setFont(new Font("Verdana", Font.PLAIN, 18));
+        add(lab2);
+
+        JLabel lab3 = new JLabel("list of Devices' name");
+        lab3.setBounds(10, 140, 384, 20);
+        lab3.setFont(new Font("Verdana", Font.PLAIN, 18));
+        add(lab3);
+
+        JLabel lab4 = new JLabel("list of devices' type");
+        lab4.setBounds(500, 140, 348, 20);
+        lab4.setFont(new Font("Verdana", Font.PLAIN, 18));
+        add(lab4);
+
+        JTextField textField1 = new JTextField();
+        textField1.setBounds(10, 50, 300, 26);
+        add(textField1);
+        textField1.setVisible(true);
+        textField1.requestFocus();
+
+        JTextField textField2 = new JTextField();
+        textField2.setBounds(500, 50, 300, 26);
+        add(textField2);
+        textField2.requestFocus();
+
+        JTextArea devs = new JTextArea();
+        devs.setBounds(10, 180, 300, 120);
+        add(devs);
+        devs.requestFocus();
+
+
+        JTextArea types = new JTextArea();
+        types.setBounds(500, 180, 300, 120);
+        add(types);
+        types.requestFocus();
+
+        JButton b = new JButton(" Start");
+        b.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Network.N = Integer.parseInt(textField1.getText());
+                Network.TC = Integer.parseInt(textField2.getText());
+                String[] names = devs.getText().split("\n");
+                String[] type = types.getText().split("\n");
+                Semaphore sem = new Semaphore(Network.N);
+
+                for (int i = 0; i < names.length; i++) {
+                    Network.TC_lines.add(new Device(names[i], type[i], sem));
+                }
+                for (Device device : Network.TC_lines) {
+                    device.start();
+                }
+            }
+        });
+        b.setBounds(400, 320, 150, 30);
+        b.setVisible(true);
+        add(b);
+        b.setBackground(Color.white);
+        b.requestFocus();
+        setBounds(100, 100, 1050, 450);
+        setLayout(null);
+        setTitle("Router App");
+        setVisible(true);
+
     }
 
 }
