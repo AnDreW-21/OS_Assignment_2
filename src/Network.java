@@ -1,9 +1,11 @@
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 class Router {
     private final ArrayList<Device> devicesLoggedIn;
     private final Semaphore semaphore;
+    private String out;
 
 
     Router() {
@@ -16,58 +18,74 @@ class Router {
         this.devicesLoggedIn = new ArrayList<Device>(sem.getBound());
     }
 
-    public boolean LogIn(Device dev) throws InterruptedException {
+    public boolean LogIn(Device dev) throws InterruptedException, IOException {
         semaphore.use(dev.getDeviceName());
         devicesLoggedIn.add(dev);
-        System.out.println(Thread.currentThread().getName() + dev + "Logged In");
+        out = Thread.currentThread().getName() + dev + "Logged In";
+        System.out.println(out);
+        new logs(out);
+
+
         return true;
     }
 
-    public void LogOut(Device dev) throws InterruptedException {
+    public void LogOut(Device dev) throws InterruptedException, IOException {
         devicesLoggedIn.removeIf(d -> d == dev);
         semaphore.release(dev.getDeviceName());
     }
 
-    public void performActivity(Device dev) {
+    public void performActivity(Device dev) throws IOException {
         for (Device d : devicesLoggedIn) {
             if (d == dev) {
-                System.out.println(Thread.currentThread().getName() + dev + "performing online activity");
-            } else System.out.println(Thread.currentThread().getName() + dev + "not logged in yet");
+                out = Thread.currentThread().getName() + dev + "performing online activity";
+                System.out.println(out);
+                new logs(out);
+            } else {
+                out =Thread.currentThread().getName() + dev + "not logged in yet";
+                System.out.println(out);
+                new logs(out);
+            }
         }
-
     }
 }
 
 class Semaphore {
     private int bound;
-
+    String out;
 
     public Semaphore(int bound) {
         this.bound = bound;
     }
 
-    public synchronized void use(String devName) throws InterruptedException {
+    public synchronized void use(String devName) throws InterruptedException, IOException {
         if (bound > 0) {
             bound--;
-            System.out.println(devName + " Occupied");
+            out=devName + " Occupied";
+            System.out.println(out);
+            new logs(out);
         } else {
-            System.out.println(Thread.currentThread().getName() + " arrived and waiting");
+            out=Thread.currentThread().getName() + " arrived and waiting";
+            System.out.println(out);
+            new logs(out);
             wait();
         }
     }
 
-    public synchronized void release(String devName) throws InterruptedException {
+    public synchronized void release(String devName) throws  IOException {
         this.bound++;
         if (bound > 0)
             this.notify();
-        System.out.println(Thread.currentThread().getName() +" Name: "+devName + " Logged Out");
+        out=Thread.currentThread().getName() + " Name: " + devName + " Logged Out";
+        System.out.println(out);
+        new logs(out);
     }
 
-    public  int getBound() {
+    public int getBound() {
         return bound;
     }
-    public void  setBound(int bound) {
-        this.bound=bound;
+
+    public void setBound(int bound) {
+        this.bound = bound;
     }
 
 
@@ -118,10 +136,12 @@ class Device extends Thread {
     @Override
     public void run() {
         try {
+            System.out.println(deviceName+" arrived");
+            new logs(deviceName+" arrived");
             router.LogIn(this);
             router.performActivity(this);
             router.LogOut(this);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException | IOException e) {
             e.printStackTrace();
         }
     }
@@ -134,7 +154,8 @@ class Device extends Thread {
 
 public class Network {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws IOException {
+        logs log = new logs();
         Scanner inp = new Scanner(System.in);
         System.out.println("What is the number of Wi-Fi connections");
         int N = inp.nextInt();
@@ -160,6 +181,24 @@ public class Network {
         }
     }
 }
+
+class logs {
+    File file = new File("logs.txt");
+
+    logs(String log) throws IOException {
+        FileWriter logFile = new FileWriter(file, true);
+        logFile.write(log + "\n");
+        logFile.flush();
+        logFile.close();
+    }
+
+    logs() throws IOException {
+        FileWriter logFile = new FileWriter(file);
+    }
+
+}
+
+
 
 
 
